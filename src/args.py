@@ -25,9 +25,8 @@ def get_args(parser):
     parser.add_argument("--prompt_type", default="Instruction", type=str, choices=["Completion", "Instruction"])
     parser.add_argument("--model_type", default="Chat", type=str, choices=["Base", "Chat"])
     parser.add_argument("--time_out", default = 3, type=int)
-    parser.add_argument("--model_name", default="deepseek-chat", type=str, choices=["deepseek-chat", "moonshot"])
 
-    
+
     #===================Computer Parser===================
     parser.add_argument("--num_gpus", default = 1, type=int)
     parser.add_argument("--num_workers", default = 1, type=int)
