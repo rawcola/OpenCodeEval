@@ -88,6 +88,72 @@ def check_correctness(task_id: int,
         solution = solution
     )
 
+def get_execution_result(task_id: int,
+                      completion_id: int,
+                      solution: str,
+                      time_out: float,
+                      ) -> Dict:
+    """
+    Evaluates the functional correctness of a completion by running the test
+    suite provided in the problem. 
+
+    :param completion_id: an optional completion ID so we can match
+        the results later even if execution finishes asynchronously.
+    """
+
+    def unsafe_execute():
+
+        with create_tempdir():
+
+            # These system calls are needed when cleaning up tempdir.
+            import os
+            import shutil
+            rmtree = shutil.rmtree
+            rmdir = os.rmdir
+            chdir = os.chdir
+
+            # Disable functionalities that can make destructive changes to the test.
+            reliability_guard()
+
+            # Construct the check program and run it.
+            check_program = solution
+
+            try:
+                exec_globals = {}
+                with swallow_io():
+                    with time_limit(time_out):
+                        exec(check_program, exec_globals)
+                result.append(exec_globals['result'])
+            except TimeoutException:
+                result.append("timed out")
+            except BaseException as e:
+                result.append(f"failed: {e}")
+
+            # Needed for cleaning up.
+            shutil.rmtree = rmtree
+            os.rmdir = rmdir
+            os.chdir = chdir
+
+    manager = multiprocessing.Manager()
+    result = manager.list()
+
+    p = multiprocessing.Process(target=unsafe_execute)
+    p.start()
+    p.join(timeout=time_out + 1)
+    if p.is_alive():
+        p.kill()
+
+    if not result:
+        result.append("timed out")
+
+    return dict(
+        task_id = task_id,
+        completion_id = completion_id,
+        passed = result[0] == "passed",
+        result = result[0],
+        solution = solution
+    )
+
 
 @contextlib.contextmanager
 def time_limit(seconds: float):
